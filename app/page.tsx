@@ -21,6 +21,7 @@ import { ChatHeaderBlock } from "@/app/parts/chat-header";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { UIMessage } from "ai";
 import { useEffect, useState, useRef } from "react";
+import { AI_NAME } from "@/config";
 
 const formSchema = z.object({
   message: z
@@ -134,9 +135,9 @@ export default function Chat() {
           <ChatHeaderBlock className="justify-center items-center">
             <Avatar>
               <AvatarImage src="/logo.png" />
-              <AvatarFallback>AI</AvatarFallback>
+              <AvatarFallback>{AI_NAME.charAt(0)}</AvatarFallback>
             </Avatar>
-            <p className="tracking-tight">Chat with AI</p>
+            <p className="tracking-tight">Chat with {AI_NAME}</p>
           </ChatHeaderBlock>
           <ChatHeaderBlock className="justify-end">
             <Button

@@ -1,10 +1,7 @@
-import { fireworks } from "@ai-sdk/fireworks";
+import { openai } from "@ai-sdk/openai";
 import { wrapLanguageModel, extractReasoningMiddleware } from "ai";
 
-export const MODEL = wrapLanguageModel({
-    model: fireworks('fireworks/deepseek-r1-0528'),
-    middleware: extractReasoningMiddleware({ tagName: 'think' }),
-});
+export const MODEL = openai('gpt-5.1');
 
 function getDateAndTime(): string {
     const now = new Date();

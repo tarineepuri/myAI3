@@ -1,35 +1,56 @@
-import { Pinecone } from "@pinecone-database/pinecone";
-import { PINECONE_API_KEY, PINECONE_INDEX_NAME } from "@/config";
+import { Pinecone } from '@pinecone-database/pinecone';
+import { PINECONE_INDEX_NAME, PINECONE_TOP_K } from '@/config';
+
+if (!process.env.PINECONE_API_KEY) {
+  throw new Error("PINECONE_API_KEY is not set");
+}
+
+const pc = new Pinecone({
+  apiKey: process.env.PINECONE_API_KEY!,
+});
+
+// point to your namespace
+const index = pc.index(PINECONE_INDEX_NAME).namespace("default");
 
 export async function searchPinecone(query: string): Promise<string> {
-  // 1. Connect to Pinecone
-  const pc = new Pinecone({
-    apiKey: PINECONE_API_KEY,
-  });
 
-  // 2. Embed text (universal format)
+  // 1) Embed using new API (latest SDK)
   const embedResult = await pc.inference.embed(
-    "llama-text-embed-v2",
-    { input: [query] }
+    "llama-text-embed-v2",      // model name
+    [query]                     // input array
   );
 
-  // 🔥 UNIVERSAL extraction that ALWAYS works:
-  const vector =
-    embedResult.data[0].values ??            // dense format
-    embedResult.data[0].embedding ??         // alt format
-    embedResult.data[0].sparseValues ??      // sparse format
-    embedResult.data[0].sparseValues?.values ?? // fallback
-    (() => {
-      throw new Error("No usable embedding vector returned.");
-    })();
+  // extract vector — ALWAYS works in new SDK
+  const queryVector = embedResult.data[0].values;
 
-  // 3. Query Pinecone index
-  const index = pc.index(PINECONE_INDEX_NAME);
-
-  const result = await index.query({
-    vector,
-    topK: 5,
+  // 2) Query Pinecone
+  const response = await index.query({
+    vector: queryVector,
+    topK: PINECONE_TOP_K,
+    includeMetadata: true
   });
 
-  return JSON.stringify(result, null, 2);
+  // 3) No matches
+  if (!response.matches || response.matches.length === 0) {
+    return "No relevant information found in the knowledge base.";
+  }
+
+  // 4) Build final context string
+  let final = "";
+
+  for (const match of response.matches) {
+    const meta = match.metadata || {};
+
+    final += `
+SOURCE: ${meta.source_name || ""}
+DESCRIPTION: ${meta.source_description || ""}
+${meta.pre_context || ""}
+${meta.text || ""}
+${meta.post_context || ""}
+------------------------------------
+`;
+  }
+
+  return final.trim();
 }
+

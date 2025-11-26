@@ -13,17 +13,16 @@ const index = pc.index(PINECONE_INDEX_NAME).namespace("default");
 
 export async function searchPinecone(query: string): Promise<string> {
 
-  // 1️⃣ EMBEDDING — Legacy SDK uses 3 arguments
+  // ✅ WORKING EMBED CALL FOR YOUR SDK VERSION
   const embedResult = await pc.inference.embed(
-    "llama-text-embed-v2",      // model name
-    { input: [query] },          // input must be inside an object
-    {}                           // options object (even if empty)
+    "llama-text-embed-v2",   // model name
+    [query],                 // MUST be an array, NOT an object
+    {}                       // options object (required even if empty)
   );
 
-  // 2️⃣ CORRECT OUTPUT SHAPE FOR YOUR SDK
+  // ❗ Your SDK uses `data[0].values`
   const queryVector = embedResult.data[0].values;
 
-  // 3️⃣ Query Pinecone
   const response = await index.query({
     topK: PINECONE_TOP_K,
     vector: queryVector,
@@ -34,7 +33,6 @@ export async function searchPinecone(query: string): Promise<string> {
     return "No relevant information found in the knowledge base.";
   }
 
-  // 4️⃣ Build final text output
   let final = "";
   for (const match of response.matches) {
     const meta = match.metadata || {};

@@ -12,13 +12,14 @@ const pc = new Pinecone({
 const index = pc.index(PINECONE_INDEX_NAME).namespace("default");
 
 export async function searchPinecone(query: string): Promise<string> {
-  // 1. Embed user query (dense vector)
-  const embedResult = await pc.inference.embed({
-    model: "llama-text-embed-v2",
-    input: [query],   // <-- MUST be array
-  });
+  
+  // 1. Embed query
+  const embedResult = await pc.inference.embed(
+    "llama-text-embed-v2",  // model
+    [query]                 // input MUST be array
+  );
 
-  const queryVector = embedResult.data[0].values;  // <-- YOUR index is DENSE
+  const queryVector = embedResult[0].values;
 
   // 2. Query Pinecone
   const response = await index.query({
@@ -27,12 +28,10 @@ export async function searchPinecone(query: string): Promise<string> {
     includeMetadata: true,
   });
 
-  // 3. Handle no matches
-  if (!response.matches || response.matches.length === 0) {
+  if (!response.matches?.length) {
     return "No relevant information found in the knowledge base.";
   }
 
-  // 4. Build context summary
   let final = "";
   for (const match of response.matches) {
     const meta = match.metadata || {};
@@ -51,5 +50,3 @@ ${meta.post_context || ""}
 
   return final.trim();
 }
-
-

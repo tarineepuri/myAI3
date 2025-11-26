@@ -2,7 +2,7 @@ import { Pinecone } from "@pinecone-database/pinecone";
 import { PINECONE_TOP_K, PINECONE_INDEX_NAME } from "@/config";
 
 if (!process.env.PINECONE_API_KEY) {
-  throw new Error("PINECONE_API_KEY is not set");
+  throw new Error("Missing PINECONE_API_KEY");
 }
 
 const pc = new Pinecone({
@@ -12,11 +12,13 @@ const pc = new Pinecone({
 const index = pc.index(PINECONE_INDEX_NAME).namespace("default");
 
 export async function searchPinecone(query: string): Promise<string> {
-  // 1. Embed user query
-  const embedResult = await pc.inference.embed({
-    model: "llama-text-embed-v2",
-    input: [query],
-  });
+  // 1. Embed user query (correct SDK format)
+  const embedResult = await pc.inference.embed(
+    "llama-text-embed-v2",
+    {
+      input: [query], 
+    }
+  );
 
   const vector = embedResult.data[0].values;
 
@@ -27,19 +29,17 @@ export async function searchPinecone(query: string): Promise<string> {
     includeMetadata: true,
   });
 
-  // 3. Handle empty results
   if (!response.matches || response.matches.length === 0) {
     return "No relevant information found in the knowledge base.";
   }
 
-  // 4. Build formatted result
   let final = "";
 
   for (const match of response.matches) {
     const meta = match.metadata || {};
 
     final += `
-SOURCE: ${meta.source_name || ""}
+SOURCE: ${meta.source_name || "Unknown"}
 DESCRIPTION: ${meta.source_description || ""}
 
 ${meta.pre_context || ""}

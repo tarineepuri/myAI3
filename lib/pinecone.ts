@@ -12,22 +12,23 @@ const pc = new Pinecone({
 const index = pc.index(PINECONE_INDEX_NAME).namespace("default");
 
 export async function searchPinecone(query: string): Promise<string> {
-  // 1. Embed user query (correct format for your SDK)
+  // 1. Embed text (correct format for your SDK)
   const embedResult = await pc.inference.embed(
     "llama-text-embed-v2",
     [query]
   );
 
-  const vector = embedResult.data[0].values;
+  // ACCESS PATH FOR YOUR VERSION:
+  const vector = embedResult.data[0].embedding;
 
-  // 2. Query Pinecone vector DB
+  // 2. Query Pinecone
   const response = await index.query({
     vector,
     topK: PINECONE_TOP_K,
-    includeMetadata: true,
+    includeMetadata: true
   });
 
-  if (!response.matches || response.matches.length === 0) {
+  if (!response.matches?.length) {
     return "No relevant information found in the knowledge base.";
   }
 

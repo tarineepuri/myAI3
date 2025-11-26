@@ -1,40 +1,39 @@
-import { Pinecone } from '@pinecone-database/pinecone';
-import { PINECONE_TOP_K, PINECONE_INDEX_NAME } from '@/config';
-
-if (!process.enimport { Pinecone } from '@pinecone-database/pinecone';
-import { PINECONE_TOP_K, PINECONE_INDEX_NAME } from '@/config';
+import { Pinecone } from "@pinecone-database/pinecone";
+import { PINECONE_TOP_K, PINECONE_INDEX_NAME } from "@/config";
 
 if (!process.env.PINECONE_API_KEY) {
-    throw new Error('PINECONE_API_KEY is not set');
+    throw new Error("PINECONE_API_KEY is not set");
 }
 
+// Initialize Pinecone client
 const pc = new Pinecone({
     apiKey: process.env.PINECONE_API_KEY,
 });
 
+// Use your index + namespace "default"
 const index = pc.index(PINECONE_INDEX_NAME).namespace("default");
 
 export async function searchPinecone(query: string): Promise<string> {
 
-    // 1. Embed the query using Pinecone inference
+    // 1. Embed the query using Pinecone Inference
     const embedding = await pc.inference.embed({
         model: "multilingual-e5-large",
         input: query,
     });
 
-    // 2. Perform vector search
+    // 2. Search Pinecone
     const response = await index.query({
         topK: PINECONE_TOP_K,
         vector: embedding[0].values,
         includeMetadata: true,
     });
 
-    // 3. Handle no results
+    // 3. Handle empty results
     if (!response.matches || response.matches.length === 0) {
         return "No relevant information found in the knowledge base.";
     }
 
-    // 4. Build context summary
+    // 4. Build formatted result
     let final = "";
 
     for (const match of response.matches) {

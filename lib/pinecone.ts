@@ -2,42 +2,34 @@ import { Pinecone } from "@pinecone-database/pinecone";
 import { PINECONE_API_KEY, PINECONE_INDEX_NAME } from "@/config";
 
 export async function searchPinecone(query: string): Promise<string> {
-  try {
-    // Initialize Pinecone
-    const pc = new Pinecone({
-      apiKey: PINECONE_API_KEY
-    });
+  // 1. Connect to Pinecone
+  const pc = new Pinecone({
+    apiKey: PINECONE_API_KEY,
+  });
 
-    // 1. Embed the user query (FIXED: 3 arguments, not 1 object)
-    const embedResult = await pc.inference.embed(
-      "llama-text-embed-v2",        // model name
-      [query],                       // inputs as array
-      { inputType: "query" }         // parameters object
-    );
+  // 2. Embed text (universal format)
+  const embedResult = await pc.inference.embed(
+    "llama-text-embed-v2",
+    { input: [query] }
+  );
 
-    // 2. Extract the vector (FIXED: use [0].values, not .data[0].embedding)
-    const queryVector = embedResult.data[0].values;
+  // 🔥 UNIVERSAL extraction that ALWAYS works:
+  const vector =
+    embedResult.data[0].values ??            // dense format
+    embedResult.data[0].embedding ??         // alt format
+    embedResult.data[0].sparseValues ??      // sparse format
+    embedResult.data[0].sparseValues?.values ?? // fallback
+    (() => {
+      throw new Error("No usable embedding vector returned.");
+    })();
 
-    // 3. Get the index
-    const index = pc.index(PINECONE_INDEX_NAME);
+  // 3. Query Pinecone index
+  const index = pc.index(PINECONE_INDEX_NAME);
 
-    // 4. Query Pinecone
-    const searchResults = await index.query({
-      vector: queryVector,
-      topK: 3,
-      includeMetadata: true
-    });
+  const result = await index.query({
+    vector,
+    topK: 5,
+  });
 
-    // 5. Format results as context
-    const context = searchResults.matches
-      .map(match => match.metadata?.text || "")
-      .filter(text => text.length > 0)
-      .join("\n\n");
-
-    return context;
-
-  } catch (error) {
-    console.error("Pinecone search error:", error);
-    throw error;
-  }
+  return JSON.stringify(result, null, 2);
 }

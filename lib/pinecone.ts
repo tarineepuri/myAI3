@@ -1,53 +1,33 @@
-import { Pinecone } from "@pinecone-database/pinecone";
-import { PINECONE_INDEX_NAME, PINECONE_TOP_K } from "@/config";
+import { Pinecone } from '@pinecone-database/pinecone';
+import { PINECONE_TOP_K } from '@/config';
+import { searchResultsToChunks, getSourcesFromChunks, getContextFromSources } from '@/lib/sources';
+import { PINECONE_INDEX_NAME } from '@/config';
 
 if (!process.env.PINECONE_API_KEY) {
-  throw new Error("PINECONE_API_KEY is not set");
+    throw new Error('PINECONE_API_KEY is not set');
 }
 
-const pc = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY!,
+export const pinecone = new Pinecone({
+    apiKey: process.env.PINECONE_API_KEY,
 });
 
-const index = pc.index(PINECONE_INDEX_NAME).namespace("default");
+export const pineconeIndex = pinecone.Index(PINECONE_INDEX_NAME);
 
-export async function searchPinecone(query: string): Promise<string> {
+export async function searchPinecone(
+    query: string,
+): Promise<string> {
+    const results = await pineconeIndex.namespace('default').searchRecords({
+        query: {
+            inputs: {
+                text: query,
+            },
+            topK: PINECONE_TOP_K,
+        },
+        fields: ['text', 'pre_context', 'post_context', 'source_url', 'source_description', 'source_type', 'order'],
+    });
 
-  // ✅ WORKING EMBED CALL FOR YOUR SDK VERSION
-  const embedResult = await pc.inference.embed(
-    "llama-text-embed-v2",   // model name
-    [query],                 // MUST be an array, NOT an object
-    {}                       // options object (required even if empty)
-  );
-
-  // ❗ Your SDK uses `data[0].values`
-  const queryVector = embedResult.data[0].values;
-
-  const response = await index.query({
-    topK: PINECONE_TOP_K,
-    vector: queryVector,
-    includeMetadata: true,
-  });
-
-  if (!response.matches || response.matches.length === 0) {
-    return "No relevant information found in the knowledge base.";
-  }
-
-  let final = "";
-  for (const match of response.matches) {
-    const meta = match.metadata || {};
-
-    final += `
-SOURCE: ${meta.source_name || ""}
-DESCRIPTION: ${meta.source_description || ""}
-
-${meta.pre_context || ""}
-${meta.text || ""}
-${meta.post_context || ""}
-
-------------------------------------
-`;
-  }
-
-  return final.trim();
+    const chunks = searchResultsToChunks(results);
+    const sources = getSourcesFromChunks(chunks);
+    const context = getContextFromSources(sources);
+    return `< results > ${context} </results>`;
 }

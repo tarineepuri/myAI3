@@ -12,14 +12,15 @@ const pc = new Pinecone({
 const index = pc.index(PINECONE_INDEX_NAME).namespace("default");
 
 export async function searchPinecone(query: string): Promise<string> {
-  
-  // 1. Embed query
-  const embedResult = await pc.inference.embed(
-    "llama-text-embed-v2",  // model
-    [query]                 // input MUST be array
-  );
 
-  const queryVector = embedResult[0].values;
+  // 1. Embed with OLD SDK FORMAT
+  const embedResult = await pc.inference.embed({
+    model: "llama-text-embed-v2",
+    input: [query],
+  });
+
+  // 👇 THIS is the correct structure in YOUR version
+  const queryVector = embedResult.data[0].values;
 
   // 2. Query Pinecone
   const response = await index.query({
@@ -28,15 +29,16 @@ export async function searchPinecone(query: string): Promise<string> {
     includeMetadata: true,
   });
 
-  if (!response.matches?.length) {
+  if (!response.matches || response.matches.length === 0) {
     return "No relevant information found in the knowledge base.";
   }
 
-  let final = "";
+  // 3. Build answer
+  let result = "";
   for (const match of response.matches) {
     const meta = match.metadata || {};
 
-    final += `
+    result += `
 SOURCE: ${meta.source_name || ""}
 DESCRIPTION: ${meta.source_description || ""}
 
@@ -48,5 +50,5 @@ ${meta.post_context || ""}
 `;
   }
 
-  return final.trim();
+  return result.trim();
 }

@@ -15,7 +15,7 @@ const index = pc.index(PINECONE_INDEX_NAME).namespace("default");
 
 export async function searchPinecone(query: string): Promise<string> {
 
-    // 1. Embed the query using Pinecone Inference
+    // 1. Embed the query using Pinecone Inference API
     const embedding = await pc.inference.embed({
         model: "multilingual-e5-large",
         input: query,
@@ -33,7 +33,7 @@ export async function searchPinecone(query: string): Promise<string> {
         return "No relevant information found in the knowledge base.";
     }
 
-    // 4. Build formatted result
+    // 4. Format retrieved results
     let final = "";
 
     for (const match of response.matches) {

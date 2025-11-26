@@ -59,23 +59,30 @@ export async function POST(req: Request) {
         }
     }
 
-    const result = streamText({
-        model: MODEL,
-        system: SYSTEM_PROMPT,
-        messages: convertToModelMessages(messages),
-        tools: {
-            webSearch,
-            vectorDatabaseSearch,
-        },
-        stopWhen: stepCountIs(10),
-        providerOptions: {
-            openai: {
-                reasoningSummary: 'auto',
-                reasoningEffort: 'low',
-                parallelToolCalls: false,
-            }
+   const result = streamText({
+    model: MODEL,
+    system: SYSTEM_PROMPT,
+    messages: convertToModelMessages(messages),
+
+    // 🚀 FORCE Pinecone search on every query
+    toolChoice: {
+        type: "tool",
+        toolName: "vectorDatabaseSearch"
+    },
+
+    tools: {
+        vectorDatabaseSearch,
+        webSearch,
+    },
+
+    providerOptions: {
+        openai: {
+            reasoningSummary: "auto",
+            reasoningEffort: "low",
+            parallelToolCalls: false
         }
-    });
+    }
+});
 
     return result.toUIMessageStreamResponse({
         sendReasoning: true,

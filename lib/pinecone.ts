@@ -19,7 +19,7 @@ export async function searchPinecone(query: string): Promise<string> {
         [query]
     );
 
-    const vector = embedResult.data[0].values;
+    const vector = embedResult.data[0].vector;
 
     // 2. Query Pinecone index
     const response = await index.query({

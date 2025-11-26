@@ -13,42 +13,11 @@ const index = pc.index(PINECONE_INDEX_NAME).namespace("default");
 
 export async function searchPinecone(query: string): Promise<string> {
 
-    // 1. Embed using Pinecone Inference (correct signature)
     const embedResult = await pc.inference.embed(
         "multilingual-e5-large",
         [query]
     );
 
-    const vector = embedResult.data[0].embedding;
-
-    // 2. Query Pinecone index
-    const response = await index.query({
-        topK: PINECONE_TOP_K,
-        vector,
-        includeMetadata: true,
-    });
-
-    // 3. No matches
-    if (!response.matches || response.matches.length === 0) {
-        return "No relevant information found in the knowledge base.";
-    }
-
-    // 4. Format results
-    let final = "";
-
-    for (const match of response.matches) {
-        const meta = match.metadata || {};
-
-        final += `
-SOURCE: ${meta.source_name || ""}
-DESCRIPTION: ${meta.source_description || ""}
-
-${meta.pre_context || ""}
-${meta.text || ""}
-${meta.post_context || ""}
-------------------------------------
-`;
-    }
-
-    return final.trim();
+    // 🔍 DEBUG: print the full embedding object as JSON
+    return JSON.stringify(embedResult.data[0], null, 2);
 }

@@ -12,20 +12,18 @@ const pc = new Pinecone({
 const index = pc.index(PINECONE_INDEX_NAME).namespace("default");
 
 export async function searchPinecone(query: string): Promise<string> {
-  // 1. Embed user query (correct SDK format)
+  // 1. Embed user query (correct format for your SDK)
   const embedResult = await pc.inference.embed(
     "llama-text-embed-v2",
-    {
-      input: [query], 
-    }
+    [query]
   );
 
   const vector = embedResult.data[0].values;
 
-  // 2. Query Pinecone
+  // 2. Query Pinecone vector DB
   const response = await index.query({
-    topK: PINECONE_TOP_K,
     vector,
+    topK: PINECONE_TOP_K,
     includeMetadata: true,
   });
 
@@ -39,7 +37,7 @@ export async function searchPinecone(query: string): Promise<string> {
     const meta = match.metadata || {};
 
     final += `
-SOURCE: ${meta.source_name || "Unknown"}
+SOURCE: ${meta.source_name || "unknown"}
 DESCRIPTION: ${meta.source_description || ""}
 
 ${meta.pre_context || ""}

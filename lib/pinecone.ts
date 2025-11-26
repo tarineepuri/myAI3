@@ -9,13 +9,12 @@ const pc = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY,
 });
 
-// Use your index + namespace "default"
 const index = pc.index(PINECONE_INDEX_NAME).namespace("default");
 
 export async function searchPinecone(query: string): Promise<string> {
-  // 1. Embed the query using SAME MODEL as your index
+  // 1. Embed user query
   const embedResult = await pc.inference.embed({
-    model: "llama-text-embed-v2", // MUST match your index
+    model: "llama-text-embed-v2",
     input: [query],
   });
 
@@ -28,12 +27,27 @@ export async function searchPinecone(query: string): Promise<string> {
     includeMetadata: true,
   });
 
-  // 3. Handle no results
+  // 3. Handle empty results
   if (!response.matches || response.matches.length === 0) {
     return "No relevant information found in the knowledge base.";
   }
 
-  // 4. Format text
+  // 4. Build formatted result
   let final = "";
 
-  fo
+  for (const match of response.matches) {
+    const meta = match.metadata || {};
+
+    final += `
+SOURCE: ${meta.source_name || ""}
+DESCRIPTION: ${meta.source_description || ""}
+
+${meta.pre_context || ""}
+${meta.text || ""}
+${meta.post_context || ""}
+------------------------------------
+`;
+  }
+
+  return final.trim();
+}

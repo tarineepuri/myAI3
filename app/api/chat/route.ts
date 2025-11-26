@@ -64,22 +64,21 @@ export async function POST(req: Request) {
     system: SYSTEM_PROMPT,
     messages: convertToModelMessages(messages),
 
-    // 🚀 FORCE Pinecone search on every query
-    toolChoice: {
-        type: "tool",
-        toolName: "vectorDatabaseSearch"
-    },
-
     tools: {
         vectorDatabaseSearch,
         webSearch,
     },
 
+    // ❌ REMOVE toolChoice (do not force Pinecone every time)
+    // The model will decide when to call it
+
+    stopWhen: stepCountIs(10),
+
     providerOptions: {
         openai: {
             reasoningSummary: "auto",
             reasoningEffort: "low",
-            parallelToolCalls: false
+            parallelToolCalls: false,
         }
     }
 });

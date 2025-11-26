@@ -16,7 +16,7 @@ export async function searchPinecone(query: string): Promise<string> {
     );
 
     // 2. Extract the vector (FIXED: use [0].values, not .data[0].embedding)
-    const queryVector = embedResult[0].values;
+    const queryVector = embedResult.data[0].values;
 
     // 3. Get the index
     const index = pc.index(PINECONE_INDEX_NAME);
